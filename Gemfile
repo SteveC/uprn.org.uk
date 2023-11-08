@@ -62,3 +62,5 @@ gem "hotwire-rails"
 gem "importmap-rails"
 gem "paper_trail"
 gem "pg"
+
+gem 'activerecord-postgis-adapter'
