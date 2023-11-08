@@ -14,7 +14,4 @@ test:
   database: db/test.sqlite3
 
 production:
-  adapter: sqlite3
-  pool: 5
-  timeout: 5000
-  database: db/production.sqlite3
+  url: <%= ENV.fetch('DATABASE_URL', '').sub(/^postgres/, "postgis") %>
