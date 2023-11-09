@@ -1,0 +1,150 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<div id="map"></div>
+<div id="info" style="display:none;"></div>
+
+<script>
+    var map = L.map('map', {
+        center: [(50 + 52) / 2, (-3 + -2) / 2], // Center between the bottom left and top right coordinates
+        zoom: 10,
+        minZoom: 4,
+        maxZoom: 18,
+        layers: [],
+        attributionControl: false
+    });
+
+    // Use an empty tile layer to have a map with no background
+    L.tileLayer('', {
+        attribution: ''
+    }).addTo(map);
+
+    var markers = {};  // Object to hold the markers, using a unique identifier for each point
+
+    function displayInfo(point) {
+        var infoDiv = document.getElementById('info');
+        infoDiv.innerHTML = '<p>Point ID: ' + point.id + '</p>'
+                      + '<p>Latitude: ' + point.latitude + '</p>'
+                      + '<p>Longitude: ' + point.longitude + '</p>';
+        infoDiv.style.display = 'block'; // Make the div visible
+    }
+
+    function fetchPointsAndUpdateMap() {
+        // Get the current bounds of the map
+        var bounds = map.getBounds();
+        var bottomLeftLat = bounds.getSouthWest().lat;
+        var bottomLeftLong = bounds.getSouthWest().lng;
+        var topRightLat = bounds.getNorthEast().lat;
+        var topRightLong = bounds.getNorthEast().lng;
+
+        // Construct the URL with the current bbox
+        var url = `/geolocations/bbox?bottom_left_lat=${bottomLeftLat}&bottom_left_long=${bottomLeftLong}&top_right_lat=${topRightLat}&top_right_long=${topRightLong}`;
+
+        // Fetch the points from the constructed URL
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                var newMarkers = {};
+                data.forEach(point => {
+                    var pointId = `point-${point.latitude}-${point.longitude}`;  // Create a unique ID for each point
+                    newMarkers[pointId] = point;  // Add or update the point in the new marker list
+
+
+                    // If this point is not in the existing markers, add it to the map
+                    if (!markers[pointId]) {
+                        markers[pointId] = L.marker([point.latitude, point.longitude]).addTo(map);
+                        markers[pointId].off('click').on('click', function() { displayInfo(point); });
+                    }
+                });
+
+                // Remove markers that are no longer in the new list
+                for (var existingId in markers) {
+                    if (!newMarkers[existingId]) {
+                        map.removeLayer(markers[existingId]);
+                        delete markers[existingId];
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching points:', error);
+            });
+    }
+
+    // Fetch and plot points when the map is first loaded
+    fetchPointsAndUpdateMap();
+
+    // Update points when the map's bbox changes
+    map.on('moveend', fetchPointsAndUpdateMap);
+</script>
+
+<script>
+
+    var deviceMarker;
+    var deviceArrow;
+
+    function updateDeviceLocation(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+        var heading = position.coords.heading; // This may not be supported on all devices/browsers
+
+        // If the deviceMarker doesn't exist, create it
+        if (!deviceMarker) {
+            deviceMarker = L.marker([lat, lng], {
+                icon: L.icon({
+                    iconUrl: '/marker.png', // Replace with the path to your marker icon
+                    iconSize: [25, 25], // Size of the icon
+                    iconAnchor: [12, 12] // Point of the icon which will correspond to marker's location
+                })
+            }).addTo(map);
+
+            // Optionally, add an arrow to indicate the heading
+            if (heading !== undefined && heading !== null) {
+                deviceArrow = L.polyline([[lat, lng], [lat, lng]], { color: 'red' }).addTo(map);
+            }
+        } else {
+            // Update the deviceMarker position
+            deviceMarker.setLatLng([lat, lng]);
+
+            // Update the arrow direction if heading is available
+            if (deviceArrow && heading !== undefined && heading !== null) {
+                var earthRadius = 6378137; // Earth's radius in meters
+                var rad = (Math.PI * heading) / 180;
+                var pointAheadLat = lat + (10 * Math.cos(rad)) / earthRadius * (180 / Math.PI);
+                var pointAheadLng = lng + (10 * Math.sin(rad)) / earthRadius * (180 / Math.PI) / Math.cos(lat * Math.PI / 180);
+                deviceArrow.setLatLngs([[lat, lng], [pointAheadLat, pointAheadLng]]);
+            }
+        }
+
+        // Center the map on the new location
+        map.setView([lat, lng], map.getZoom());
+    }
+
+    // Watch the device's position and update every second (1000 milliseconds)
+    navigator.geolocation.watchPosition(updateDeviceLocation, function(err) {
+        console.warn(`ERROR(${err.code}): ${err.message}`);
+    }, {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+        frequency: 1000 // Not all browsers support this option
+    });
+
+    // Listen for device orientation events to update the heading
+    window.addEventListener('deviceorientation', function(event) {
+        var heading = event.alpha;
+
+        // Update the arrow direction if heading is available
+        if (deviceArrow && heading !== undefined && heading !== null) {
+            var latLng = deviceMarker.getLatLng();
+            var lat = latLng.lat;
+            var lng = latLng.lng;
+
+            var earthRadius = 6378137; // Earth's radius in meters
+            var rad = (Math.PI * heading) / 180;
+            var pointAheadLat = lat + (10 * Math.cos(rad)) / earthRadius * (180 / Math.PI);
+            var pointAheadLng = lng + (10 * Math.sin(rad)) / earthRadius * (180 / Math.PI) / Math.cos(lat * Math.PI / 180);
+            deviceArrow.setLatLngs([[lat, lng], [pointAheadLat, pointAheadLng]]);
+        }
+    }, false);
+
+</script>

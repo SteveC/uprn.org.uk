@@ -2,6 +2,8 @@ Rails.application.routes.draw do
   root 'home#show'
 
   get '/dashboard' => 'dashboard#show'
+  get '/map' => 'home#map'
+
   get '/auth/auth0/callback' => 'auth0#callback'
   get '/auth/failure' => 'auth0#failure'
   get '/auth/logout' => 'auth0#logout'
@@ -65,3 +67,4 @@ Rails.application.routes.draw do
   #     resources :products
   #   end
 end
+

@@ -15,14 +15,14 @@
         <% flash.each do |key, value| %>
          <div class="alert alert-success"><%= value %></div>
         <% end %>
-        <a class="navbar-brand" href="#">UPRN.org.uk</a>
+        <a class="navbar-brand" href="/">UPRN.org.uk</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav mr-auto">
             <li class="nav-item <%= 'active' if params[:controller] == 'home' %>">
-              <a class="nav-link" href="/">Home</a>
+              <a class="nav-link" href="/map">Map</a>
             </li>
             <li class="nav-item <%= 'active' if params[:controller] == 'dashboard' %>">
               <a class="nav-link" href="/dashboard">My Dashboard</a>
